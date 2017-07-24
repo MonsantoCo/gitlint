@@ -107,7 +107,7 @@ class GitCommit(object):
     """
 
     def __init__(self, context, message, sha=None, date=None, author_name=None, author_email=None, parents=None,
-                 is_merge_commit=False, changed_files=None):
+                 is_merge_commit=False, is_fixup_commit=False, is_squash_commit=False, changed_files=None):
         self.context = context
         self.message = message
         self.sha = sha
@@ -117,6 +117,8 @@ class GitCommit(object):
         # parent commit hashes
         self.parents = parents or []
         self.is_merge_commit = is_merge_commit
+        self.is_fixup_commit = is_fixup_commit
+        self.is_squash_commit = is_squash_commit
         self.changed_files = changed_files or []
 
     def __unicode__(self):
@@ -135,7 +137,8 @@ class GitCommit(object):
                self.sha == other.sha and self.author_name == other.author_name and \
                self.author_email == other.author_email and \
                self.date == other.date and self.parents == other.parents and \
-               self.is_merge_commit == other.is_merge_commit and self.changed_files == other.changed_files  # noqa
+               self.is_merge_commit == other.is_merge_commit and self.is_fixup_commit == other.is_fixup_commit and \
+               self.is_squash_commit == other.is_squash_commit and self.changed_files == other.changed_files  # noqa
 
 
 class GitContext(object):
@@ -156,7 +159,10 @@ class GitContext(object):
 
         # For now, we consider a commit a merge commit if its title starts with "Merge"
         is_merge_commit = commit_msg_obj.title.startswith("Merge")
-        commit = GitCommit(context, commit_msg_obj, is_merge_commit=is_merge_commit)
+        is_fixup_commit = commit_msg_obj.title.startswith("fixup!")
+        is_squash_commit = commit_msg_obj.title.startswith("squash!")
+        commit = GitCommit(context, commit_msg_obj, is_merge_commit=is_merge_commit, is_fixup_commit=is_fixup_commit,
+                           is_squash_commit=is_squash_commit)
 
         context.commits.append(commit)
         return context
@@ -198,9 +204,13 @@ class GitContext(object):
 
             # Create Git commit object with the retrieved info
             commit_msg_obj = GitCommitMessage.from_full_message(commit_msg)
+            is_fixup_commit = commit_msg_obj.title.startswith("fixup!")
+            is_squash_commit = commit_msg_obj.title.startswith("squash!")
+
             commit = GitCommit(context, commit_msg_obj, sha=sha, author_name=name,
                                author_email=email, date=commit_date, changed_files=changed_files,
-                               parents=commit_parents, is_merge_commit=commit_is_merge_commit)
+                               parents=commit_parents, is_merge_commit=commit_is_merge_commit,
+                               is_fixup_commit=is_fixup_commit, is_squash_commit=is_squash_commit)
 
             context.commits.append(commit)
 
